@@ -68,9 +68,22 @@ function validateBounds(n, s, e, w) {
     return null;
 }
 
+// Approximate width/height (km) and area (km^2) of a bounding box on a sphere.
+// Width uses the cosine of the mid-latitude; good enough for an AOI readout,
+// not a geodesic-grade figure.
+function bboxDimensions(n, s, e, w) {
+    const R = 6371; // mean Earth radius, km
+    const rad = Math.PI / 180;
+    const heightKm = Math.abs(n - s) * rad * R;
+    const midLat = ((n + s) / 2) * rad;
+    const widthKm = Math.abs(e - w) * rad * R * Math.cos(midLat);
+    return { widthKm, heightKm, areaKm2: widthKm * heightKm };
+}
+
 if (typeof module !== 'undefined' && module.exports) {
     module.exports = {
         fmt, inRange, buildBboxWKT, buildPolygonWKT,
-        parseWKTPolygon, bboxFromPoints, isAxisAlignedRectangle, validateBounds
+        parseWKTPolygon, bboxFromPoints, isAxisAlignedRectangle, validateBounds,
+        bboxDimensions
     };
 }

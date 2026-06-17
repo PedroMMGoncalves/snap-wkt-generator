@@ -3,7 +3,8 @@ import * as WKT from './wkt.js';
 
 const {
     fmt, inRange, buildBboxWKT, buildPolygonWKT,
-    parseWKTPolygon, bboxFromPoints, isAxisAlignedRectangle, validateBounds
+    parseWKTPolygon, bboxFromPoints, isAxisAlignedRectangle, validateBounds,
+    bboxDimensions
 } = WKT;
 
 describe('fmt', () => {
@@ -87,4 +88,20 @@ describe('validateBounds', () => {
     it('flags out-of-range coordinates', () => expect(validateBounds(91, 0, 10, 0)).toBe('invalidRange'));
     it('flags N <= S', () => expect(validateBounds(10, 20, 5, 0)).toBe('invalidOrder'));
     it('flags E <= W', () => expect(validateBounds(20, 10, 0, 5)).toBe('invalidOrder'));
+});
+
+describe('bboxDimensions', () => {
+    it('gives ~111 km per degree of latitude for height', () => {
+        const d = bboxDimensions(1, 0, 1, 0);
+        expect(d.heightKm).toBeCloseTo(111.19, 1);
+    });
+    it('narrows width by cos(latitude)', () => {
+        const atEquator = bboxDimensions(0.5, -0.5, 1, 0).widthKm;
+        const at60 = bboxDimensions(60.5, 59.5, 1, 0).widthKm;
+        expect(at60).toBeCloseTo(atEquator * Math.cos(60 * Math.PI / 180), 1);
+    });
+    it('area is width times height', () => {
+        const d = bboxDimensions(10, 0, 10, 0);
+        expect(d.areaKm2).toBeCloseTo(d.widthKm * d.heightKm, 6);
+    });
 });
