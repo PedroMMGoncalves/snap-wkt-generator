@@ -2,9 +2,10 @@
 
 A browser tool for building the area-of-interest geometry that [ESA SNAP](https://step.esa.int/main/toolboxes/snap/) expects. Draw a box on a map, or type the four bounds, and copy out a WKT `POLYGON` together with its North/South/East/West values. The output is plain WKT text, so it works anywhere else that reads WKT, not just SNAP.
 
-The whole thing is one `index.html` plus a banner image. No backend, no API keys, no build step: open the file, or drop it on any static host.
+It is a static page: `index.html` for the UI, `wkt.js` for the geometry helpers, and a banner image. No backend, no API keys, no build step: open the file, or drop it on any static host.
 
 [![Live demo](https://img.shields.io/badge/demo-GitHub_Pages-2ea44f.svg)](https://pedrommgoncalves.github.io/snap-wkt-generator/)
+[![tests](https://github.com/PedroMMGoncalves/snap-wkt-generator/actions/workflows/tests.yml/badge.svg)](https://github.com/PedroMMGoncalves/snap-wkt-generator/actions/workflows/tests.yml)
 [![Leaflet](https://img.shields.io/badge/Leaflet-1.9.4-199900.svg)](https://leafletjs.com)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 
@@ -63,9 +64,20 @@ You can also just open `index.html` directly, but serving over HTTP is closer to
 
 To publish your own copy, enable GitHub Pages on `main` from the repo root.
 
+## Tests
+
+The geometry and WKT logic lives in `wkt.js` so it can be tested without a browser. Unit tests run with [Vitest](https://vitest.dev):
+
+```bash
+npm install
+npm test
+```
+
+The same suite runs in CI on every push and pull request (`.github/workflows/tests.yml`).
+
 ## Built with
 
-Leaflet 1.9.4 and Leaflet.draw 1.0.4, plain HTML/CSS/JS, no framework or bundler. Tiles come from CARTO, Esri and OpenStreetMap, fonts from Google Fonts; all of it loads from a CDN, so the first load needs a connection. Strings are kept in a single `I18N` table near the top of the script, so adding a language is one more entry.
+Leaflet 1.9.4 and Leaflet.draw 1.0.4, plain HTML/CSS/JS, no framework or bundler. `wkt.js` is a plain classic script in the browser and a CommonJS module under Node, so the page needs no build and the tests need no DOM. Tiles come from CARTO, Esri and OpenStreetMap, fonts from Google Fonts; all of it loads from a CDN, so the first load needs a connection. Strings are kept in a single `I18N` table near the top of the script, so adding a language is one more entry.
 
 ## License
 

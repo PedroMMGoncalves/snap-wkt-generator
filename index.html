@@ -245,6 +245,7 @@
 
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet.draw/1.0.4/leaflet.draw.js"></script>
+    <script src="wkt.js"></script>
 
     <script>
         /* ---------------------------------------------------------------
@@ -426,10 +427,7 @@
 
             if (e.layerType === 'polygon') {
                 const latlngs = e.layer.getLatLngs()[0];
-                let wkt = "POLYGON ((";
-                latlngs.forEach(ll => { wkt += `${fmt(ll.lng)} ${fmt(ll.lat)}, `; });
-                wkt += `${fmt(latlngs[0].lng)} ${fmt(latlngs[0].lat)}))`;
-                document.getElementById('wkt-output').value = wkt;
+                document.getElementById('wkt-output').value = buildPolygonWKT(latlngs.map(ll => [ll.lng, ll.lat]));
 
                 const bounds = e.layer.getBounds();
                 updateInputsSilently(bounds.getNorth(), bounds.getSouth(), bounds.getEast(), bounds.getWest());
@@ -445,11 +443,10 @@
         });
 
         /* ---------------------------------------------------------------
-           Helpers
+           Helpers  (geometry/WKT helpers live in wkt.js: fmt, inRange,
+           buildBboxWKT, buildPolygonWKT, parseWKTPolygon, bboxFromPoints,
+           isAxisAlignedRectangle, validateBounds)
         ---------------------------------------------------------------- */
-        const fmt = v => Number(v).toFixed(5);
-        const inRange = (lat, lng) => lat >= -90 && lat <= 90 && lng >= -180 && lng <= 180;
-
         function showToast(message, isError = false) {
             const toast = document.getElementById('toast');
             toast.textContent = message;
@@ -496,8 +493,7 @@
         function applyCoordinates(n, s, e, w, skipMap = false) {
             n = Number(n); s = Number(s); e = Number(e); w = Number(w);
             updateInputsSilently(n, s, e, w);
-            const wkt = `POLYGON ((${fmt(w)} ${fmt(n)}, ${fmt(e)} ${fmt(n)}, ${fmt(e)} ${fmt(s)}, ${fmt(w)} ${fmt(s)}, ${fmt(w)} ${fmt(n)}))`;
-            document.getElementById('wkt-output').value = wkt;
+            document.getElementById('wkt-output').value = buildBboxWKT(n, s, e, w);
 
             if (!skipMap) {
                 drawnItems.clearLayers();
@@ -517,9 +513,8 @@
             const e = parseFloat(document.getElementById('este').value);
             const w = parseFloat(document.getElementById('oeste').value);
 
-            if ([n, s, e, w].some(isNaN)) return showToast(t('missingValues'), true);
-            if (!inRange(n, e) || !inRange(s, w)) return showToast(t('invalidRange'), true);
-            if (n <= s || e <= w) return showToast(t('invalidOrder'), true);
+            const err = validateBounds(n, s, e, w);
+            if (err) return showToast(t(err), true);
 
             applyCoordinates(n, s, e, w);
             saveState();
@@ -529,32 +524,17 @@
             const wkt = document.getElementById('wkt-output').value.trim();
             if (!wkt) return;
 
-            const ring = wkt.match(/POLYGON\s*\(\(\s*(.+?)\s*\)\)/i);
-            if (!ring) return showToast(t('missingValues'), true);
+            const pts = parseWKTPolygon(wkt);
+            if (!pts || pts.length < 3) return showToast(t('missingValues'), true);
 
-            // Parse every "lng lat" pair in the ring (any number of vertices).
-            const pts = ring[1].split(',')
-                .map(pair => pair.trim().split(/\s+/).map(Number))
-                .filter(p => p.length >= 2 && !p.slice(0, 2).some(isNaN));
-
-            if (pts.length < 3) return showToast(t('missingValues'), true);
-
-            const lngs = pts.map(p => p[0]);
-            const lats = pts.map(p => p[1]);
-
-            if (lats.some((lat, i) => !inRange(lat, lngs[i]))) {
+            if (pts.some(p => !inRange(p[1], p[0]))) {
                 return showToast(t('invalidRange'), true);
             }
 
-            const n = Math.max(...lats), s = Math.min(...lats);
-            const e = Math.max(...lngs), w = Math.min(...lngs);
-
-            // Detect an axis-aligned rectangle (4 distinct corners + closing point).
-            const distinct = pts.length === 5 &&
-                new Set(lats.map(fmt)).size === 2 && new Set(lngs.map(fmt)).size === 2;
+            const { n, s, e, w } = bboxFromPoints(pts);
 
             drawnItems.clearLayers();
-            if (distinct) {
+            if (isAxisAlignedRectangle(pts)) {
                 applyCoordinates(n, s, e, w);
             } else {
                 const latlngs = pts.map(p => [p[1], p[0]]);

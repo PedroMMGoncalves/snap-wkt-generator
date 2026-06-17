@@ -1,0 +1,12 @@
+{
+  "name": "snap-wkt-generator",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Unit tests for the WKT/bbox helpers used by the SNAP Bounding Box Generator.",
+  "scripts": {
+    "test": "vitest run"
+  },
+  "devDependencies": {
+    "vitest": "^2.1.8"
+  }
+}
