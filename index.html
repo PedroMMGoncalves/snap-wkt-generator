@@ -13,7 +13,7 @@
 
     <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Crect width='24' height='24' rx='5' fill='%230a0a0a'/%3E%3Crect x='6' y='6' width='12' height='12' fill='none' stroke='%2300d4ff' stroke-width='2'/%3E%3C/svg%3E">
 
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400&family=Space+Grotesk:wght@500;600&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet.draw/1.0.4/leaflet.draw.css" />
 
@@ -25,6 +25,8 @@
             --text-secondary: #737373;
             --border-subtle: #e5e5e5;
             --border-focus: #171717;
+            --accent: #b87333;
+            --accent-deep: #8a5722;
             --error-bg: #fee2e2;
             --error-text: #991b1b;
             --success-bg: #dcfce7;
@@ -104,8 +106,9 @@
         }
 
         .section-title {
-            font-size: 0.75rem; font-weight: 600; color: var(--text-secondary);
-            margin-bottom: 1rem; display: flex; align-items: center; text-transform: uppercase; letter-spacing: 0.05em;
+            font-family: 'Space Grotesk', sans-serif;
+            font-size: 0.8125rem; font-weight: 600; color: var(--text-primary);
+            margin-bottom: 1rem; display: flex; align-items: center; text-transform: uppercase; letter-spacing: 0.08em;
         }
         .section-title::after { content: ""; flex: 1; height: 1px; background-color: var(--border-subtle); margin-left: 0.75rem; }
 
@@ -121,7 +124,7 @@
             border: 1px solid var(--border-subtle); border-radius: 6px; transition: all 0.2s ease;
         }
 
-        input[type="number"]:focus, textarea:focus { outline: none; border-color: var(--border-focus); box-shadow: 0 0 0 1px var(--border-focus); }
+        input[type="number"]:focus, textarea:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent); }
         textarea { resize: vertical; min-height: 100px; line-height: 1.5; margin-bottom: 1rem; }
 
         .button-group { display: flex; gap: 0.75rem; }
@@ -133,8 +136,8 @@
             border: 1px solid transparent;
         }
 
-        .btn-primary { background-color: var(--text-primary); color: var(--bg-app); }
-        .btn-primary:hover { opacity: 0.8; }
+        .btn-primary { background-color: var(--accent); color: #ffffff; }
+        .btn-primary:hover { background-color: var(--accent-deep); }
 
         .btn-secondary { background-color: transparent; border-color: var(--border-subtle); color: var(--text-primary); }
         .btn-secondary:hover { background-color: var(--border-subtle); }
