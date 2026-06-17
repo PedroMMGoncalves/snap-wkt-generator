@@ -25,8 +25,8 @@
             --text-secondary: #737373;
             --border-subtle: #e5e5e5;
             --border-focus: #171717;
-            --accent: #b87333;
-            --accent-deep: #8a5722;
+            --accent: #1e2a3f;
+            --accent-deep: #0f1620;
             --error-bg: #fee2e2;
             --error-text: #991b1b;
             --success-bg: #dcfce7;
@@ -40,6 +40,8 @@
             --text-secondary: #a3a3a3;
             --border-subtle: #262626;
             --border-focus: #ededed;
+            --accent: #b87333;
+            --accent-deep: #8a5722;
             --error-bg: #450a0a;
             --error-text: #fecaca;
             --success-bg: #052e16;
@@ -140,7 +142,7 @@
         .btn-primary:hover { background-color: var(--accent-deep); }
 
         .btn-secondary { background-color: transparent; border-color: var(--border-subtle); color: var(--text-primary); }
-        .btn-secondary:hover { background-color: var(--border-subtle); }
+        .btn-secondary:hover { border-color: var(--accent); color: var(--accent); background-color: transparent; }
 
         #toast {
             position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%) translateY(20px);
