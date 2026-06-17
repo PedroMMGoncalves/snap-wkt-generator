@@ -131,6 +131,12 @@
 
         .button-group { display: flex; gap: 0.75rem; }
 
+        .area-readout {
+            margin-top: 0.75rem; min-height: 1em;
+            font-family: 'JetBrains Mono', monospace; font-size: 0.6875rem;
+            color: var(--text-secondary); letter-spacing: 0.02em;
+        }
+
         button.action {
             display: flex; align-items: center; justify-content: center; width: 100%;
             padding: 0.625rem 1rem; font-family: 'Inter', sans-serif; font-size: 0.8125rem;
@@ -220,6 +226,7 @@
                 <button id="btn-apply" class="action btn-secondary" data-i18n="apply">Apply to Map</button>
                 <button id="btn-clear" class="action btn-secondary" style="flex: 0.4;" data-i18n="clear">Clear</button>
             </div>
+            <div id="area-readout" class="area-readout"></div>
         </section>
 
         <section class="form-section" style="margin-bottom: 0;">
@@ -339,6 +346,14 @@
             langBtn.textContent = currentLang === 'en' ? 'PT' : 'EN';
 
             buildLayerControl();
+
+            // Re-format the area readout in the new locale.
+            updateAreaReadout(
+                document.getElementById('norte').value,
+                document.getElementById('sul').value,
+                document.getElementById('este').value,
+                document.getElementById('oeste').value
+            );
         }
 
         function toggleLang() {
@@ -438,7 +453,18 @@
         });
 
         map.on('draw:edited', function (e) {
-            e.layers.eachLayer(function (layer) { updateUIFromBounds(layer.getBounds()); });
+            e.layers.eachLayer(function (layer) {
+                // A rectangle stays a rectangle (rebuild from its bounds). A polygon
+                // keeps all of its vertices instead of collapsing to its bounding box.
+                if (layer instanceof L.Rectangle) {
+                    updateUIFromBounds(layer.getBounds());
+                } else if (layer instanceof L.Polygon) {
+                    const latlngs = layer.getLatLngs()[0];
+                    document.getElementById('wkt-output').value = buildPolygonWKT(latlngs.map(ll => [ll.lng, ll.lat]));
+                    const b = layer.getBounds();
+                    updateInputsSilently(b.getNorth(), b.getSouth(), b.getEast(), b.getWest());
+                }
+            });
             saveState();
         });
 
@@ -488,6 +514,19 @@
             document.getElementById('sul').value = fmt(s);
             document.getElementById('este').value = fmt(e);
             document.getElementById('oeste').value = fmt(w);
+            updateAreaReadout(n, s, e, w);
+        }
+
+        // Approximate bounding-box size, shown under the coordinate fields.
+        function updateAreaReadout(n, s, e, w) {
+            const el = document.getElementById('area-readout');
+            if (!el) return;
+            const nums = [n, s, e, w].map(Number);
+            if (nums.some(v => !Number.isFinite(v))) { el.textContent = ''; return; }
+            const d = bboxDimensions(nums[0], nums[1], nums[2], nums[3]);
+            const loc = currentLang === 'pt' ? 'pt-PT' : 'en-US';
+            const num = v => v.toLocaleString(loc, { maximumFractionDigits: v < 10 ? 1 : 0 });
+            el.textContent = `≈ ${num(d.widthKm)} × ${num(d.heightKm)} km · ${num(d.areaKm2)} km²`;
         }
 
         function applyCoordinates(n, s, e, w, skipMap = false) {
@@ -554,6 +593,7 @@
 
         function clearAll() {
             ['norte', 'sul', 'este', 'oeste', 'wkt-output'].forEach(id => document.getElementById(id).value = '');
+            document.getElementById('area-readout').textContent = '';
             drawnItems.clearLayers();
             localStorage.removeItem('snap_wkt_state');
             window.history.replaceState({}, '', window.location.pathname);
