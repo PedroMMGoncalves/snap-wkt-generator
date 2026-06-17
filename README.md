@@ -20,7 +20,7 @@ The flow also works backwards: paste a WKT `POLYGON` into the output box and it 
 
 A few things worth knowing:
 
-- Input is validated before it's applied — latitude within ±90, longitude within ±180, North above South, East of West.
+- Input is validated before it's applied: latitude within ±90, longitude within ±180, North above South, East of West.
 - The current box is written into the URL as `?bbox=west,south,east,north`, so a shared link reopens the exact same area. **Share Link** copies it.
 - Last box, theme, language and basemap are remembered in `localStorage`.
 - UI is available in English and Portuguese. The first load picks one from the browser locale; the header button switches it.
@@ -30,26 +30,26 @@ A few things worth knowing:
 
 Switchable from the layer control at the bottom-left:
 
-- Carto Light / Carto Dark — clean reference maps
-- Esri World Imagery — satellite
-- Esri Imagery + place names — satellite with a labels/boundaries overlay
+- Carto Light / Carto Dark: clean reference maps
+- Esri World Imagery: satellite
+- Esri Imagery + place names: satellite with a labels/boundaries overlay
 - OpenStreetMap
 
 ## WKT format
 
 The bounding box is written as a closed ring in `lng lat` order (X then Y), with the first vertex repeated at the end:
 
-```
+```text
 POLYGON ((W N, E N, E S, W S, W N))
 ```
 
 For example, a box over mainland Portugal:
 
-```
+```text
 POLYGON ((-9.50000 42.20000, -6.20000 42.20000, -6.20000 36.90000, -9.50000 36.90000, -9.50000 42.20000))
 ```
 
-Coordinates are WGS84 (EPSG:4326), longitude/latitude in degrees — reproject if your SNAP graph works in another CRS. Parsing handles a single-ring `POLYGON` only; multipolygons, holes and other geometry types are not supported.
+Coordinates are WGS84 (EPSG:4326), longitude/latitude in decimal degrees. Reproject if your SNAP graph works in another CRS. Parsing handles a single-ring `POLYGON` only; multipolygons, holes and other geometry types are not supported.
 
 ## Running locally
 
@@ -65,8 +65,8 @@ To publish your own copy, enable GitHub Pages on `main` from the repo root.
 
 ## Built with
 
-Leaflet 1.9.4 and Leaflet.draw 1.0.4, plain HTML/CSS/JS, no framework or bundler. Tiles come from CARTO, Esri and OpenStreetMap, fonts from Google Fonts; all of it loads from a CDN, so the first load needs a connection. Strings are kept in a single `I18N` table near the top of the script — adding a language is one more entry.
+Leaflet 1.9.4 and Leaflet.draw 1.0.4, plain HTML/CSS/JS, no framework or bundler. Tiles come from CARTO, Esri and OpenStreetMap, fonts from Google Fonts; all of it loads from a CDN, so the first load needs a connection. Strings are kept in a single `I18N` table near the top of the script, so adding a language is one more entry.
 
 ## License
 
-MIT — see [LICENSE](LICENSE).
+MIT. See [LICENSE](LICENSE).
