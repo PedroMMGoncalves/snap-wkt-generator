@@ -61,7 +61,7 @@ Coordinates are WGS84 (EPSG:4326), longitude/latitude in decimal degrees. Reproj
 
 Bring an existing area in, or take the current one out:
 
-- **Import** a GeoJSON or KML file with **Import file**, or drag it onto the map. The first polygon is loaded; a `MultiPolygon` uses its first ring, and altitude values in KML coordinates are dropped.
+- **Import** a GeoJSON or KML file with **Import file**, or drag it onto the map. In GeoJSON the first polygon is used (a `MultiPolygon` takes its first ring); in KML the first `<coordinates>` ring is read, so put your area first. Holes and altitude values are ignored.
 - **Export** the current area as GeoJSON (`aoi.geojson`) or KML (`aoi.kml`) with the matching buttons.
 
 Everything stays in WGS84 lon/lat; nothing is reprojected on the way in or out.
