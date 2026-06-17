@@ -1,20 +1,22 @@
 <!DOCTYPE html>
-<html lang="pt">
+<html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    
+
     <title>SNAP Bounding Box Generator</title>
-    <meta name="description" content="Utilitário geográfico para gerar caixas delimitadoras (Bounding Box) e Polígonos WKT para o ESA SNAP.">
+    <meta name="description" content="Geographic utility to generate Bounding Boxes and WKT polygons for ESA SNAP.">
     <meta property="og:title" content="SNAP Bounding Box Generator">
-    <meta property="og:description" content="Gere coordenadas WKT instantaneamente num mapa interativo.">
+    <meta property="og:description" content="Generate WKT coordinates instantly on an interactive map.">
     <meta property="og:type" content="website">
     <meta property="og:image" content="banner.png">
+
+    <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Crect width='24' height='24' rx='5' fill='%230a0a0a'/%3E%3Crect x='6' y='6' width='12' height='12' fill='none' stroke='%2300d4ff' stroke-width='2'/%3E%3C/svg%3E">
 
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet.draw/1.0.4/leaflet.draw.css" />
-    
+
     <style>
         :root {
             --bg-app: #ffffff;
@@ -69,7 +71,7 @@
         .map-container { flex: 1; position: relative; background-color: var(--bg-app); }
         #map { position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 1; }
 
-        /* Estilos do Banner */
+        /* Banner */
         .brand-banner {
             width: 100%;
             height: auto;
@@ -80,18 +82,25 @@
             border: 1px solid var(--border-subtle);
         }
 
-        .header-actions { 
-            display: flex; 
-            justify-content: flex-end; 
-            margin-bottom: 1.5rem; 
+        .header-actions {
+            display: flex;
+            justify-content: flex-end;
+            align-items: center;
+            gap: 0.5rem;
+            margin-bottom: 1.5rem;
         }
-        
-        .theme-toggle {
+
+        .icon-btn {
             background: transparent; border: none; color: var(--text-secondary);
             cursor: pointer; padding: 6px; border-radius: 6px; transition: all 0.2s ease;
             display: flex; align-items: center; justify-content: center;
         }
-        .theme-toggle:hover { color: var(--text-primary); background: var(--border-subtle); }
+        .icon-btn:hover { color: var(--text-primary); background: var(--border-subtle); }
+
+        .lang-toggle {
+            font-family: 'JetBrains Mono', monospace; font-size: 0.75rem; font-weight: 400;
+            min-width: 34px; height: 30px; line-height: 1; letter-spacing: 0.05em;
+        }
 
         .section-title {
             font-size: 0.75rem; font-weight: 600; color: var(--text-secondary);
@@ -102,9 +111,9 @@
         .form-section { margin-bottom: 2rem; }
         .grid-2x2 { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1.5rem; }
         .input-group { display: flex; flex-direction: column; gap: 0.4rem; }
-        
+
         label { font-size: 0.75rem; font-weight: 500; color: var(--text-secondary); }
-        
+
         input[type="number"], textarea {
             width: 100%; padding: 0.625rem; font-family: 'JetBrains Mono', monospace;
             font-size: 0.8125rem; color: var(--text-primary); background: var(--bg-app);
@@ -115,8 +124,8 @@
         textarea { resize: vertical; min-height: 100px; line-height: 1.5; margin-bottom: 1rem; }
 
         .button-group { display: flex; gap: 0.75rem; }
-        
-        button {
+
+        button.action {
             display: flex; align-items: center; justify-content: center; width: 100%;
             padding: 0.625rem 1rem; font-family: 'Inter', sans-serif; font-size: 0.8125rem;
             font-weight: 500; border-radius: 6px; cursor: pointer; transition: all 0.2s ease;
@@ -125,7 +134,7 @@
 
         .btn-primary { background-color: var(--text-primary); color: var(--bg-app); }
         .btn-primary:hover { opacity: 0.8; }
-        
+
         .btn-secondary { background-color: transparent; border-color: var(--border-subtle); color: var(--text-primary); }
         .btn-secondary:hover { background-color: var(--border-subtle); }
 
@@ -138,6 +147,11 @@
 
         .toast-show { opacity: 1 !important; transform: translateX(-50%) translateY(0) !important; }
 
+        .noscript-banner {
+            padding: 1rem; margin-bottom: 1rem; border-radius: 6px;
+            background: var(--error-bg); color: var(--error-text); font-size: 0.8125rem;
+        }
+
         @media (max-width: 768px) {
             body { flex-direction: column; }
             .sidebar { width: 100%; max-height: 50vh; border-right: none; border-bottom: 1px solid var(--border-subtle); }
@@ -149,9 +163,14 @@
     <aside class="sidebar">
         <header>
             <img src="banner.png" alt="SNAP Bounding Box Generator" class="brand-banner">
-            
+
+            <noscript>
+                <div class="noscript-banner" data-i18n="noscript">This application requires JavaScript to be enabled.</div>
+            </noscript>
+
             <div class="header-actions">
-                <button class="theme-toggle" onclick="toggleTheme()" title="Alternar Modo Escuro/Claro">
+                <button id="btn-lang" class="icon-btn lang-toggle" title="Change language" data-i18n-title="langTitle">EN</button>
+                <button id="btn-theme" class="icon-btn" title="Toggle Dark/Light Mode" data-i18n-title="themeTitle">
                     <svg id="theme-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                         <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>
                     </svg>
@@ -160,37 +179,37 @@
         </header>
 
         <section class="form-section">
-            <div class="section-title">Bounding Box</div>
+            <div class="section-title" data-i18n="bbox">Bounding Box</div>
             <div class="grid-2x2">
                 <div class="input-group">
-                    <label for="norte">North (Y Max)</label>
+                    <label for="norte" data-i18n="north">North (Y Max)</label>
                     <input type="number" id="norte" step="0.0001" placeholder="0.0000">
                 </div>
                 <div class="input-group">
-                    <label for="sul">South (Y Min)</label>
+                    <label for="sul" data-i18n="south">South (Y Min)</label>
                     <input type="number" id="sul" step="0.0001" placeholder="0.0000">
                 </div>
                 <div class="input-group">
-                    <label for="oeste">West (X Min)</label>
+                    <label for="oeste" data-i18n="west">West (X Min)</label>
                     <input type="number" id="oeste" step="0.0001" placeholder="0.0000">
                 </div>
                 <div class="input-group">
-                    <label for="este">East (X Max)</label>
+                    <label for="este" data-i18n="east">East (X Max)</label>
                     <input type="number" id="este" step="0.0001" placeholder="0.0000">
                 </div>
             </div>
             <div class="button-group">
-                <button class="btn-secondary" onclick="processManualInputs()">Apply to Map</button>
-                <button class="btn-secondary" onclick="clearAll()" style="flex: 0.4;">Clear</button>
+                <button id="btn-apply" class="action btn-secondary" data-i18n="apply">Apply to Map</button>
+                <button id="btn-clear" class="action btn-secondary" style="flex: 0.4;" data-i18n="clear">Clear</button>
             </div>
         </section>
 
         <section class="form-section" style="margin-bottom: 0;">
-            <div class="section-title">WKT Output</div>
-            <textarea id="wkt-output" placeholder="POLYGON ((...))" onchange="parseWKTInput()"></textarea>
+            <div class="section-title" data-i18n="wktOutput">WKT Output</div>
+            <textarea id="wkt-output" placeholder="POLYGON ((...))"></textarea>
             <div class="button-group">
-                <button class="btn-primary" onclick="copyWKT()">Copy WKT</button>
-                <button class="btn-secondary" onclick="copyURL()" title="Copiar link com estas coordenadas">🔗 Partilhar Link</button>
+                <button id="btn-copy" class="action btn-primary" data-i18n="copyWkt">Copy WKT</button>
+                <button id="btn-share" class="action btn-secondary" title="Copy link with these coordinates" data-i18n="shareLink" data-i18n-title="shareTitle">🔗 Share Link</button>
             </div>
         </section>
     </aside>
@@ -205,38 +224,149 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet.draw/1.0.4/leaflet.draw.js"></script>
 
     <script>
-        function toggleTheme() {
-            document.body.classList.toggle('dark-theme');
-            const isDark = document.body.classList.contains('dark-theme');
-            localStorage.setItem('snap_theme', isDark ? 'dark' : 'light');
-            
+        /* ---------------------------------------------------------------
+           Internationalisation (i18n) — English + Portuguese
+        ---------------------------------------------------------------- */
+        const I18N = {
+            en: {
+                docTitle: "SNAP Bounding Box Generator",
+                bbox: "Bounding Box",
+                north: "North (Y Max)",
+                south: "South (Y Min)",
+                west: "West (X Min)",
+                east: "East (X Max)",
+                apply: "Apply to Map",
+                clear: "Clear",
+                wktOutput: "WKT Output",
+                copyWkt: "Copy WKT",
+                shareLink: "🔗 Share Link",
+                shareTitle: "Copy link with these coordinates",
+                themeTitle: "Toggle Dark/Light Mode",
+                langTitle: "Change language",
+                noscript: "This application requires JavaScript to be enabled.",
+                copied: "Copied successfully!",
+                empty: "Nothing to copy.",
+                missingValues: "Missing values.",
+                linkCopied: "Share link copied!",
+                complexLoaded: "Polygon loaded onto the map.",
+                copyFailed: "Could not copy to clipboard.",
+                invalidRange: "Coordinates out of range (lat ±90, lng ±180).",
+                invalidOrder: "North must be greater than South, and East greater than West.",
+                baseLight: "Light Map (Carto)",
+                baseDark: "Dark Map (Carto)",
+                baseSat: "Satellite (Esri)",
+                baseOsm: "Standard (OSM)"
+            },
+            pt: {
+                docTitle: "SNAP Bounding Box Generator",
+                bbox: "Bounding Box",
+                north: "Norte (Y Máx)",
+                south: "Sul (Y Mín)",
+                west: "Oeste (X Mín)",
+                east: "Este (X Máx)",
+                apply: "Aplicar ao Mapa",
+                clear: "Limpar",
+                wktOutput: "Saída WKT",
+                copyWkt: "Copiar WKT",
+                shareLink: "🔗 Partilhar Link",
+                shareTitle: "Copiar link com estas coordenadas",
+                themeTitle: "Alternar Modo Escuro/Claro",
+                langTitle: "Mudar idioma",
+                noscript: "Esta aplicação requer que o JavaScript esteja ativado.",
+                copied: "Copiado com sucesso!",
+                empty: "Nada para copiar.",
+                missingValues: "Valores em falta.",
+                linkCopied: "Link de partilha copiado!",
+                complexLoaded: "Polígono carregado no mapa.",
+                copyFailed: "Não foi possível copiar.",
+                invalidRange: "Coordenadas fora do intervalo (lat ±90, lng ±180).",
+                invalidOrder: "Norte deve ser maior que Sul, e Este maior que Oeste.",
+                baseLight: "Mapa Claro (Carto)",
+                baseDark: "Mapa Escuro (Carto)",
+                baseSat: "Satélite (Esri)",
+                baseOsm: "Standard (OSM)"
+            }
+        };
+
+        let currentLang = 'en';
+        const t = key => (I18N[currentLang] && I18N[currentLang][key]) || key;
+
+        function applyLang(lang) {
+            currentLang = I18N[lang] ? lang : 'en';
+            localStorage.setItem('snap_lang', currentLang);
+            document.documentElement.lang = currentLang;
+            document.title = t('docTitle');
+
+            document.querySelectorAll('[data-i18n]').forEach(el => {
+                el.textContent = t(el.getAttribute('data-i18n'));
+            });
+            document.querySelectorAll('[data-i18n-title]').forEach(el => {
+                el.setAttribute('title', t(el.getAttribute('data-i18n-title')));
+            });
+
+            const langBtn = document.getElementById('btn-lang');
+            // Button shows the language you will switch TO.
+            langBtn.textContent = currentLang === 'en' ? 'PT' : 'EN';
+
+            buildLayerControl();
+        }
+
+        function toggleLang() {
+            applyLang(currentLang === 'en' ? 'pt' : 'en');
+        }
+
+        /* ---------------------------------------------------------------
+           Theme
+        ---------------------------------------------------------------- */
+        function setThemeIcon(isDark) {
             const icon = document.getElementById('theme-icon');
-            if(isDark) {
+            if (isDark) {
                 icon.innerHTML = '<circle cx="12" cy="12" r="5"></circle><line x1="12" y1="1" x2="12" y2="3"></line><line x1="12" y1="21" x2="12" y2="23"></line><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line><line x1="1" y1="12" x2="3" y2="12"></line><line x1="21" y1="12" x2="23" y2="12"></line><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>';
             } else {
                 icon.innerHTML = '<path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>';
             }
         }
-        
-        if (localStorage.getItem('snap_theme') === 'dark') { toggleTheme(); }
 
+        function toggleTheme() {
+            document.body.classList.toggle('dark-theme');
+            const isDark = document.body.classList.contains('dark-theme');
+            localStorage.setItem('snap_theme', isDark ? 'dark' : 'light');
+            setThemeIcon(isDark);
+        }
+
+        /* ---------------------------------------------------------------
+           Map
+        ---------------------------------------------------------------- */
         const map = L.map('map', { zoomControl: false }).setView([39.5, -8.0], 6);
         L.control.zoom({ position: 'bottomright' }).addTo(map);
 
-        const cartoLight = L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', { maxZoom: 20 });
-        const cartoDark = L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', { maxZoom: 20 });
-        const esriSatellite = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', { maxZoom: 19 });
-        const osm = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19 });
-
-        cartoLight.addTo(map); 
-
-        const baseMaps = {
-            "Mapa Claro (Carto)": cartoLight,
-            "Mapa Escuro (Carto)": cartoDark,
-            "Satélite (Esri)": esriSatellite,
-            "Standard (OSM)": osm
+        const BASE_LAYERS = {
+            light: L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', { maxZoom: 20 }),
+            dark: L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', { maxZoom: 20 }),
+            sat: L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', { maxZoom: 19 }),
+            osm: L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19 })
         };
-        L.control.layers(baseMaps, null, {position: 'bottomleft'}).addTo(map);
+        const BASE_LABEL_KEY = { light: 'baseLight', dark: 'baseDark', sat: 'baseSat', osm: 'baseOsm' };
+
+        // Restore the saved basemap (defaults to light).
+        let activeBase = localStorage.getItem('snap_basemap');
+        if (!BASE_LAYERS[activeBase]) activeBase = 'light';
+        BASE_LAYERS[activeBase].addTo(map);
+
+        let layerControl = null;
+        function buildLayerControl() {
+            if (layerControl) map.removeControl(layerControl);
+            const baseMaps = {};
+            Object.keys(BASE_LAYERS).forEach(key => {
+                baseMaps[t(BASE_LABEL_KEY[key])] = BASE_LAYERS[key];
+            });
+            layerControl = L.control.layers(baseMaps, null, { position: 'bottomleft' }).addTo(map);
+        }
+
+        map.on('baselayerchange', function (e) {
+            const key = Object.keys(BASE_LAYERS).find(k => BASE_LAYERS[k] === e.layer);
+            if (key) localStorage.setItem('snap_basemap', key);
+        });
 
         const drawnItems = new L.FeatureGroup();
         map.addLayer(drawnItems);
@@ -255,26 +385,32 @@
         map.on(L.Draw.Event.CREATED, function (e) {
             drawnItems.clearLayers();
             drawnItems.addLayer(e.layer);
-            
+
             if (e.layerType === 'polygon') {
                 const latlngs = e.layer.getLatLngs()[0];
                 let wkt = "POLYGON ((";
-                latlngs.forEach(ll => { wkt += `${ll.lng.toFixed(5)} ${ll.lat.toFixed(5)}, `; });
-                wkt += `${latlngs[0].lng.toFixed(5)} ${latlngs[0].lat.toFixed(5)}))`; 
+                latlngs.forEach(ll => { wkt += `${fmt(ll.lng)} ${fmt(ll.lat)}, `; });
+                wkt += `${fmt(latlngs[0].lng)} ${fmt(latlngs[0].lat)}))`;
                 document.getElementById('wkt-output').value = wkt;
-                
+
                 const bounds = e.layer.getBounds();
                 updateInputsSilently(bounds.getNorth(), bounds.getSouth(), bounds.getEast(), bounds.getWest());
             } else {
                 updateUIFromBounds(e.layer.getBounds());
             }
-            saveState(); 
+            saveState();
         });
 
         map.on('draw:edited', function (e) {
             e.layers.eachLayer(function (layer) { updateUIFromBounds(layer.getBounds()); });
             saveState();
         });
+
+        /* ---------------------------------------------------------------
+           Helpers
+        ---------------------------------------------------------------- */
+        const fmt = v => Number(v).toFixed(5);
+        const inRange = (lat, lng) => lat >= -90 && lat <= 90 && lng >= -180 && lng <= 180;
 
         function showToast(message, isError = false) {
             const toast = document.getElementById('toast');
@@ -285,23 +421,51 @@
             setTimeout(() => toast.classList.remove('toast-show'), 3000);
         }
 
+        function copyText(text, successMsg) {
+            if (navigator.clipboard && window.isSecureContext) {
+                navigator.clipboard.writeText(text)
+                    .then(() => showToast(successMsg))
+                    .catch(() => fallbackCopy(text, successMsg));
+            } else {
+                fallbackCopy(text, successMsg);
+            }
+        }
+
+        function fallbackCopy(text, successMsg) {
+            const ta = document.createElement('textarea');
+            ta.value = text;
+            ta.style.position = 'fixed';
+            ta.style.opacity = '0';
+            document.body.appendChild(ta);
+            ta.focus();
+            ta.select();
+            try {
+                document.execCommand('copy');
+                showToast(successMsg);
+            } catch (err) {
+                showToast(t('copyFailed'), true);
+            }
+            document.body.removeChild(ta);
+        }
+
         function updateInputsSilently(n, s, e, w) {
-            document.getElementById('norte').value = n.toFixed(5);
-            document.getElementById('sul').value = s.toFixed(5);
-            document.getElementById('este').value = e.toFixed(5);
-            document.getElementById('oeste').value = w.toFixed(5);
+            document.getElementById('norte').value = fmt(n);
+            document.getElementById('sul').value = fmt(s);
+            document.getElementById('este').value = fmt(e);
+            document.getElementById('oeste').value = fmt(w);
         }
 
         function applyCoordinates(n, s, e, w, skipMap = false) {
+            n = Number(n); s = Number(s); e = Number(e); w = Number(w);
             updateInputsSilently(n, s, e, w);
-            const wkt = `POLYGON ((${w} ${n}, ${e} ${n}, ${e} ${s}, ${w} ${s}, ${w} ${n}))`;
+            const wkt = `POLYGON ((${fmt(w)} ${fmt(n)}, ${fmt(e)} ${fmt(n)}, ${fmt(e)} ${fmt(s)}, ${fmt(w)} ${fmt(s)}, ${fmt(w)} ${fmt(n)}))`;
             document.getElementById('wkt-output').value = wkt;
 
             if (!skipMap) {
                 drawnItems.clearLayers();
                 const bounds = [[s, w], [n, e]];
-                L.rectangle(bounds, {color: "#2563eb", weight: 2, fillOpacity: 0.1}).addTo(drawnItems);
-                map.fitBounds(bounds, {padding: [20, 20]});
+                L.rectangle(bounds, { color: "#2563eb", weight: 2, fillOpacity: 0.1 }).addTo(drawnItems);
+                map.fitBounds(bounds, { padding: [20, 20] });
             }
         }
 
@@ -310,36 +474,64 @@
         }
 
         function processManualInputs() {
-            try {
-                const n = parseFloat(document.getElementById('norte').value);
-                const s = parseFloat(document.getElementById('sul').value);
-                const e = parseFloat(document.getElementById('este').value);
-                const w = parseFloat(document.getElementById('oeste').value);
-                if (isNaN(n) || isNaN(s) || isNaN(e) || isNaN(w)) throw new Error("Valores em falta");
-                
-                applyCoordinates(n, s, e, w);
-                saveState();
-            } catch (err) { showToast(err.message, true); }
+            const n = parseFloat(document.getElementById('norte').value);
+            const s = parseFloat(document.getElementById('sul').value);
+            const e = parseFloat(document.getElementById('este').value);
+            const w = parseFloat(document.getElementById('oeste').value);
+
+            if ([n, s, e, w].some(isNaN)) return showToast(t('missingValues'), true);
+            if (!inRange(n, e) || !inRange(s, w)) return showToast(t('invalidRange'), true);
+            if (n <= s || e <= w) return showToast(t('invalidOrder'), true);
+
+            applyCoordinates(n, s, e, w);
+            saveState();
         }
 
         function parseWKTInput() {
-            const wkt = document.getElementById('wkt-output').value;
-            const match = wkt.match(/POLYGON\s*\(\(\s*([-\d.]+)\s+([-\d.]+),\s*([-\d.]+)\s+([-\d.]+),\s*([-\d.]+)\s+([-\d.]+),\s*([-\d.]+)\s+([-\d.]+),\s*([-\d.]+)\s+([-\d.]+)\s*\)\)/i);
-            if (match) {
-                const xCoords = [parseFloat(match[1]), parseFloat(match[3]), parseFloat(match[5]), parseFloat(match[7])];
-                const yCoords = [parseFloat(match[2]), parseFloat(match[4]), parseFloat(match[6]), parseFloat(match[8])];
-                applyCoordinates(Math.max(...yCoords), Math.min(...yCoords), Math.max(...xCoords), Math.min(...xCoords));
-                saveState();
-            } else {
-                showToast("A desenhar polígono complexo...");
+            const wkt = document.getElementById('wkt-output').value.trim();
+            if (!wkt) return;
+
+            const ring = wkt.match(/POLYGON\s*\(\(\s*(.+?)\s*\)\)/i);
+            if (!ring) return showToast(t('missingValues'), true);
+
+            // Parse every "lng lat" pair in the ring (any number of vertices).
+            const pts = ring[1].split(',')
+                .map(pair => pair.trim().split(/\s+/).map(Number))
+                .filter(p => p.length >= 2 && !p.slice(0, 2).some(isNaN));
+
+            if (pts.length < 3) return showToast(t('missingValues'), true);
+
+            const lngs = pts.map(p => p[0]);
+            const lats = pts.map(p => p[1]);
+
+            if (lats.some((lat, i) => !inRange(lat, lngs[i]))) {
+                return showToast(t('invalidRange'), true);
             }
+
+            const n = Math.max(...lats), s = Math.min(...lats);
+            const e = Math.max(...lngs), w = Math.min(...lngs);
+
+            // Detect an axis-aligned rectangle (4 distinct corners + closing point).
+            const distinct = pts.length === 5 &&
+                new Set(lats.map(fmt)).size === 2 && new Set(lngs.map(fmt)).size === 2;
+
+            drawnItems.clearLayers();
+            if (distinct) {
+                applyCoordinates(n, s, e, w);
+            } else {
+                const latlngs = pts.map(p => [p[1], p[0]]);
+                const poly = L.polygon(latlngs, { color: "#16a34a", weight: 2, fillOpacity: 0.1 }).addTo(drawnItems);
+                map.fitBounds(poly.getBounds(), { padding: [20, 20] });
+                updateInputsSilently(n, s, e, w);
+                showToast(t('complexLoaded'));
+            }
+            saveState();
         }
 
         function copyWKT() {
             const txt = document.getElementById('wkt-output');
-            if (!txt.value) return showToast("Vazio", true);
-            txt.select();
-            navigator.clipboard.writeText(txt.value).then(() => showToast("Copiado com sucesso!"));
+            if (!txt.value) return showToast(t('empty'), true);
+            copyText(txt.value, t('copied'));
         }
 
         function clearAll() {
@@ -356,8 +548,8 @@
             const e = document.getElementById('este').value;
             const w = document.getElementById('oeste').value;
             const wkt = document.getElementById('wkt-output').value;
-            if(n && s && e && w) {
-                localStorage.setItem('snap_wkt_state', JSON.stringify({n, s, e, w, wkt}));
+            if (n && s && e && w) {
+                localStorage.setItem('snap_wkt_state', JSON.stringify({ n, s, e, w, wkt }));
                 const newUrl = `${window.location.pathname}?bbox=${w},${s},${e},${n}`;
                 window.history.replaceState({}, '', newUrl);
             }
@@ -365,15 +557,40 @@
 
         function copyURL() {
             saveState();
-            navigator.clipboard.writeText(window.location.href).then(() => showToast("Link de partilha copiado!"));
+            copyText(window.location.href, t('linkCopied'));
         }
 
-        window.onload = function() {
+        /* ---------------------------------------------------------------
+           Init
+        ---------------------------------------------------------------- */
+        function init() {
+            // Theme: saved preference wins, else respect OS setting.
+            const savedTheme = localStorage.getItem('snap_theme');
+            const prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+            const isDark = savedTheme ? savedTheme === 'dark' : prefersDark;
+            if (isDark) document.body.classList.add('dark-theme');
+            setThemeIcon(isDark);
+
+            // Language: saved preference wins, else browser language.
+            const savedLang = localStorage.getItem('snap_lang');
+            const browserLang = (navigator.language || 'en').toLowerCase().startsWith('pt') ? 'pt' : 'en';
+            applyLang(savedLang || browserLang);
+
+            // Wire up controls (no inline handlers).
+            document.getElementById('btn-lang').addEventListener('click', toggleLang);
+            document.getElementById('btn-theme').addEventListener('click', toggleTheme);
+            document.getElementById('btn-apply').addEventListener('click', processManualInputs);
+            document.getElementById('btn-clear').addEventListener('click', clearAll);
+            document.getElementById('btn-copy').addEventListener('click', copyWKT);
+            document.getElementById('btn-share').addEventListener('click', copyURL);
+            document.getElementById('wkt-output').addEventListener('change', parseWKTInput);
+
+            // Restore state: URL bbox first, then localStorage.
             const params = new URLSearchParams(window.location.search);
             const bbox = params.get('bbox');
             if (bbox) {
                 const [w, s, e, n] = bbox.split(',').map(Number);
-                if (!isNaN(w) && !isNaN(s) && !isNaN(e) && !isNaN(n)) {
+                if (![w, s, e, n].some(isNaN) && inRange(n, e) && inRange(s, w)) {
                     applyCoordinates(n, s, e, w);
                     return;
                 }
@@ -383,10 +600,12 @@
                 try {
                     const data = JSON.parse(saved);
                     applyCoordinates(parseFloat(data.n), parseFloat(data.s), parseFloat(data.e), parseFloat(data.w));
-                    if(data.wkt.length > 150) document.getElementById('wkt-output').value = data.wkt;
-                } catch(e) {}
+                    if (data.wkt && data.wkt.length > 150) document.getElementById('wkt-output').value = data.wkt;
+                } catch (err) { /* ignore corrupt state */ }
             }
-        };
+        }
+
+        init();
     </script>
 </body>
 </html>
