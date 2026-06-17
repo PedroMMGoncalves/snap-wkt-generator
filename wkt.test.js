@@ -4,7 +4,8 @@ import * as WKT from './wkt.js';
 const {
     fmt, inRange, buildBboxWKT, buildPolygonWKT,
     parseWKTPolygon, bboxFromPoints, isAxisAlignedRectangle, validateBounds,
-    bboxDimensions
+    bboxDimensions,
+    closeRing, pointsToGeoJSON, geoJSONToPoints, pointsToKML, kmlToPoints
 } = WKT;
 
 describe('fmt', () => {
@@ -103,5 +104,69 @@ describe('bboxDimensions', () => {
     it('area is width times height', () => {
         const d = bboxDimensions(10, 0, 10, 0);
         expect(d.areaKm2).toBeCloseTo(d.widthKm * d.heightKm, 6);
+    });
+});
+
+describe('closeRing', () => {
+    it('closes an open ring', () => {
+        expect(closeRing([[0, 0], [1, 0], [1, 1]])).toEqual([[0, 0], [1, 0], [1, 1], [0, 0]]);
+    });
+    it('leaves a closed ring unchanged', () => {
+        expect(closeRing([[0, 0], [1, 0], [0, 0]])).toEqual([[0, 0], [1, 0], [0, 0]]);
+    });
+});
+
+describe('pointsToGeoJSON', () => {
+    it('builds a closed Polygon Feature', () => {
+        const gj = pointsToGeoJSON([[0, 0], [1, 0], [1, 1]]);
+        expect(gj.type).toBe('Feature');
+        expect(gj.geometry.type).toBe('Polygon');
+        expect(gj.geometry.coordinates[0]).toEqual([[0, 0], [1, 0], [1, 1], [0, 0]]);
+    });
+});
+
+describe('geoJSONToPoints', () => {
+    const ring = [[-9.5, 42.2], [-6.2, 42.2], [-6.2, 36.9], [-9.5, 36.9], [-9.5, 42.2]];
+    it('reads a Feature polygon', () => {
+        expect(geoJSONToPoints({ type: 'Feature', geometry: { type: 'Polygon', coordinates: [ring] } })).toEqual(ring);
+    });
+    it('reads a bare Polygon geometry', () => {
+        expect(geoJSONToPoints({ type: 'Polygon', coordinates: [ring] })).toEqual(ring);
+    });
+    it('reads the first polygon of a FeatureCollection', () => {
+        const fc = { type: 'FeatureCollection', features: [
+            { type: 'Feature', geometry: { type: 'Point', coordinates: [0, 0] } },
+            { type: 'Feature', geometry: { type: 'Polygon', coordinates: [ring] } }
+        ] };
+        expect(geoJSONToPoints(fc)).toEqual(ring);
+    });
+    it('reads the first ring of a MultiPolygon', () => {
+        expect(geoJSONToPoints({ type: 'MultiPolygon', coordinates: [[ring]] })).toEqual(ring);
+    });
+    it('drops a third (altitude) ordinate', () => {
+        expect(geoJSONToPoints({ type: 'Polygon', coordinates: [[[1, 2, 99], [3, 4, 99], [5, 6, 99]]] }))
+            .toEqual([[1, 2], [3, 4], [5, 6]]);
+    });
+    it('returns null for non-polygon input', () => {
+        expect(geoJSONToPoints({ type: 'Point', coordinates: [0, 0] })).toBeNull();
+        expect(geoJSONToPoints(null)).toBeNull();
+    });
+});
+
+describe('pointsToKML / kmlToPoints', () => {
+    it('emits a Polygon with a closed coordinates ring', () => {
+        const kml = pointsToKML([[0, 0], [1, 0], [1, 1]]);
+        expect(kml).toContain('<coordinates>0,0 1,0 1,1 0,0</coordinates>');
+    });
+    it('parses coordinates back, ignoring altitude', () => {
+        const kml = '<coordinates>-9.5,42.2,0 -6.2,42.2,0 -6.2,36.9,0 -9.5,42.2,0</coordinates>';
+        expect(kmlToPoints(kml)).toEqual([[-9.5, 42.2], [-6.2, 42.2], [-6.2, 36.9], [-9.5, 42.2]]);
+    });
+    it('round-trips points through KML', () => {
+        const pts = [[-9.5, 42.2], [-6.2, 42.2], [-6.2, 36.9]];
+        expect(kmlToPoints(pointsToKML(pts))).toEqual([...pts, [-9.5, 42.2]]);
+    });
+    it('returns null when there are no coordinates', () => {
+        expect(kmlToPoints('<kml></kml>')).toBeNull();
     });
 });

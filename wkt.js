@@ -80,10 +80,79 @@ function bboxDimensions(n, s, e, w) {
     return { widthKm, heightKm, areaKm2: widthKm * heightKm };
 }
 
+// --- GeoJSON / KML interchange (single-ring polygons) -------------------
+
+// Close a ring of [lng, lat] vertices if it is not already closed.
+function closeRing(points) {
+    const ring = points.map(p => [Number(p[0]), Number(p[1])]);
+    const a = ring[0], b = ring[ring.length - 1];
+    if (ring.length && (a[0] !== b[0] || a[1] !== b[1])) ring.push([a[0], a[1]]);
+    return ring;
+}
+
+// A GeoJSON Polygon Feature from [lng, lat] vertices.
+function pointsToGeoJSON(points) {
+    return {
+        type: 'Feature',
+        properties: {},
+        geometry: { type: 'Polygon', coordinates: [closeRing(points)] }
+    };
+}
+
+// Extract the first polygon's outer ring from a GeoJSON object as
+// [[lng, lat], ...]; null when there is no usable polygon.
+function geoJSONToPoints(obj) {
+    if (!obj || typeof obj !== 'object') return null;
+    let geom = null;
+    if (obj.type === 'FeatureCollection' && Array.isArray(obj.features)) {
+        const f = obj.features.find(x => x && x.geometry && /Polygon$/.test(x.geometry.type));
+        geom = f ? f.geometry : null;
+    } else if (obj.type === 'Feature') {
+        geom = obj.geometry;
+    } else if (obj.type) {
+        geom = obj; // bare geometry
+    }
+    if (!geom) return null;
+    let ring = null;
+    if (geom.type === 'Polygon') ring = geom.coordinates && geom.coordinates[0];
+    else if (geom.type === 'MultiPolygon') ring = geom.coordinates && geom.coordinates[0] && geom.coordinates[0][0];
+    if (!Array.isArray(ring)) return null;
+    const pts = ring.map(c => [Number(c[0]), Number(c[1])])
+        .filter(c => Number.isFinite(c[0]) && Number.isFinite(c[1]));
+    return pts.length ? pts : null;
+}
+
+// A minimal KML document with one Polygon Placemark.
+function pointsToKML(points) {
+    const coords = closeRing(points).map(p => `${p[0]},${p[1]}`).join(' ');
+    return '<?xml version="1.0" encoding="UTF-8"?>\n' +
+        '<kml xmlns="http://www.opengis.net/kml/2.2">\n' +
+        '  <Placemark>\n' +
+        '    <name>AOI</name>\n' +
+        '    <Polygon><outerBoundaryIs><LinearRing>' +
+        `<coordinates>${coords}</coordinates>` +
+        '</LinearRing></outerBoundaryIs></Polygon>\n' +
+        '  </Placemark>\n' +
+        '</kml>\n';
+}
+
+// Parse the first <coordinates> block of a KML string into [[lng, lat], ...].
+// Altitude, if present, is ignored. Null when no coordinates are found.
+function kmlToPoints(kml) {
+    const block = String(kml).match(/<coordinates>([\s\S]*?)<\/coordinates>/i);
+    if (!block) return null;
+    const pts = block[1].trim().split(/\s+/)
+        .map(tok => tok.split(',').map(Number))
+        .map(c => [c[0], c[1]])
+        .filter(c => Number.isFinite(c[0]) && Number.isFinite(c[1]));
+    return pts.length ? pts : null;
+}
+
 if (typeof module !== 'undefined' && module.exports) {
     module.exports = {
         fmt, inRange, buildBboxWKT, buildPolygonWKT,
         parseWKTPolygon, bboxFromPoints, isAxisAlignedRectangle, validateBounds,
-        bboxDimensions
+        bboxDimensions,
+        closeRing, pointsToGeoJSON, geoJSONToPoints, pointsToKML, kmlToPoints
     };
 }

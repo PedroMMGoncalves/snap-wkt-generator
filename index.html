@@ -238,6 +238,18 @@
             </div>
         </section>
 
+        <section class="form-section" style="margin-top: 2rem; margin-bottom: 0;">
+            <div class="section-title" data-i18n="importExport">Import / Export</div>
+            <div class="button-group">
+                <button id="btn-import" class="action btn-secondary" title="Import a GeoJSON or KML file" data-i18n="importFile" data-i18n-title="importTitle">Import file</button>
+            </div>
+            <div class="button-group" style="margin-top: 0.75rem;">
+                <button id="btn-geojson" class="action btn-secondary" title="Download the current area as GeoJSON" data-i18n-title="exportGeoJSONTitle">GeoJSON</button>
+                <button id="btn-kml" class="action btn-secondary" title="Download the current area as KML" data-i18n-title="exportKMLTitle">KML</button>
+            </div>
+            <input type="file" id="file-input" accept=".geojson,.json,.kml" style="display: none;">
+        </section>
+
         <footer class="sidebar-footer">
             <span>&copy; 2026 <a href="https://pedrommgoncalves.github.io/" target="_blank" rel="noopener" title="Portfolio" data-i18n-title="portfolioTitle">Pedro Gonçalves</a></span>
             <a href="https://github.com/PedroMMGoncalves/snap-wkt-generator" target="_blank" rel="noopener" title="View source on GitHub" data-i18n-title="sourceTitle">GitHub</a>
@@ -274,6 +286,14 @@
                 shareTitle: "Copy link with these coordinates",
                 portfolioTitle: "Portfolio",
                 sourceTitle: "View source on GitHub",
+                importExport: "Import / Export",
+                importFile: "Import file",
+                importTitle: "Import a GeoJSON or KML file",
+                exportGeoJSONTitle: "Download the current area as GeoJSON",
+                exportKMLTitle: "Download the current area as KML",
+                importedOk: "File imported.",
+                importFailed: "Could not read that file.",
+                nothingToExport: "Nothing to export.",
                 themeTitle: "Toggle Dark/Light Mode",
                 langTitle: "Change language",
                 noscript: "This application requires JavaScript to be enabled.",
@@ -306,6 +326,14 @@
                 shareTitle: "Copiar link com estas coordenadas",
                 portfolioTitle: "Portfólio",
                 sourceTitle: "Ver código no GitHub",
+                importExport: "Importar / Exportar",
+                importFile: "Importar ficheiro",
+                importTitle: "Importar um ficheiro GeoJSON ou KML",
+                exportGeoJSONTitle: "Descarregar a área atual como GeoJSON",
+                exportKMLTitle: "Descarregar a área atual como KML",
+                importedOk: "Ficheiro importado.",
+                importFailed: "Não foi possível ler o ficheiro.",
+                nothingToExport: "Nada para exportar.",
                 themeTitle: "Alternar Modo Escuro/Claro",
                 langTitle: "Mudar idioma",
                 noscript: "Esta aplicação requer que o JavaScript esteja ativado.",
@@ -619,6 +647,77 @@
         }
 
         /* ---------------------------------------------------------------
+           Import / Export (GeoJSON, KML)
+        ---------------------------------------------------------------- */
+        // Draw a ring of [lng, lat] points: a rectangle if axis-aligned,
+        // otherwise a polygon. Returns true on success.
+        function applyPolygonPoints(pts) {
+            if (!pts || pts.length < 3) { showToast(t('importFailed'), true); return false; }
+            if (pts.some(p => !inRange(p[1], p[0]))) { showToast(t('invalidRange'), true); return false; }
+            const { n, s, e, w } = bboxFromPoints(pts);
+            drawnItems.clearLayers();
+            if (isAxisAlignedRectangle(pts)) {
+                applyCoordinates(n, s, e, w);
+            } else {
+                document.getElementById('wkt-output').value = buildPolygonWKT(pts);
+                const poly = L.polygon(pts.map(p => [p[1], p[0]]), { color: "#16a34a", weight: 2, fillOpacity: 0.1 }).addTo(drawnItems);
+                map.fitBounds(poly.getBounds(), { padding: [20, 20] });
+                updateInputsSilently(n, s, e, w);
+            }
+            saveState();
+            return true;
+        }
+
+        function importGeometry(text, name) {
+            try {
+                const trimmed = text.trim();
+                const isKml = /\.kml$/i.test(name || '') || trimmed.startsWith('<');
+                const pts = isKml ? kmlToPoints(text) : geoJSONToPoints(JSON.parse(text));
+                if (!pts) return showToast(t('importFailed'), true);
+                if (applyPolygonPoints(pts)) showToast(t('importedOk'));
+            } catch (err) {
+                showToast(t('importFailed'), true);
+            }
+        }
+
+        function handleFile(file) {
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = () => importGeometry(String(reader.result), file.name);
+            reader.onerror = () => showToast(t('importFailed'), true);
+            reader.readAsText(file);
+        }
+
+        function download(filename, mime, content) {
+            const url = URL.createObjectURL(new Blob([content], { type: mime }));
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = filename;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+        }
+
+        // Current geometry from the WKT box, as [lng, lat] points.
+        function currentPoints() {
+            const wkt = document.getElementById('wkt-output').value.trim();
+            return wkt ? parseWKTPolygon(wkt) : null;
+        }
+
+        function exportGeoJSON() {
+            const pts = currentPoints();
+            if (!pts) return showToast(t('nothingToExport'), true);
+            download('aoi.geojson', 'application/geo+json', JSON.stringify(pointsToGeoJSON(pts), null, 2));
+        }
+
+        function exportKML() {
+            const pts = currentPoints();
+            if (!pts) return showToast(t('nothingToExport'), true);
+            download('aoi.kml', 'application/vnd.google-earth.kml+xml', pointsToKML(pts));
+        }
+
+        /* ---------------------------------------------------------------
            Init
         ---------------------------------------------------------------- */
         function init() {
@@ -642,6 +741,19 @@
             document.getElementById('btn-copy').addEventListener('click', copyWKT);
             document.getElementById('btn-share').addEventListener('click', copyURL);
             document.getElementById('wkt-output').addEventListener('change', parseWKTInput);
+
+            document.getElementById('btn-import').addEventListener('click', () => document.getElementById('file-input').click());
+            document.getElementById('file-input').addEventListener('change', e => { handleFile(e.target.files[0]); e.target.value = ''; });
+            document.getElementById('btn-geojson').addEventListener('click', exportGeoJSON);
+            document.getElementById('btn-kml').addEventListener('click', exportKML);
+
+            // Drag and drop a GeoJSON/KML file onto the map.
+            const mapEl = document.querySelector('.map-container');
+            ['dragenter', 'dragover'].forEach(ev => mapEl.addEventListener(ev, e => e.preventDefault()));
+            mapEl.addEventListener('drop', e => {
+                e.preventDefault();
+                if (e.dataTransfer && e.dataTransfer.files[0]) handleFile(e.dataTransfer.files[0]);
+            });
 
             // Restore state: URL bbox first, then localStorage.
             const params = new URLSearchParams(window.location.search);
