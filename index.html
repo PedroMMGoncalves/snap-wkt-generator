@@ -158,6 +158,18 @@
             background: var(--error-bg); color: var(--error-text); font-size: 0.8125rem;
         }
 
+        .sidebar-footer {
+            margin-top: auto; padding-top: 1.5rem;
+            border-top: 1px solid var(--border-subtle);
+            display: flex; justify-content: space-between; align-items: center; gap: 0.5rem;
+            font-size: 0.6875rem; color: var(--text-secondary); letter-spacing: 0.02em;
+        }
+        .sidebar-footer a {
+            color: var(--text-secondary); text-decoration: none;
+            border-bottom: 1px solid transparent; transition: color 0.2s, border-color 0.2s;
+        }
+        .sidebar-footer a:hover { color: var(--accent); border-bottom-color: var(--accent); }
+
         @media (max-width: 768px) {
             body { flex-direction: column; }
             .sidebar { width: 100%; max-height: 50vh; border-right: none; border-bottom: 1px solid var(--border-subtle); }
@@ -218,6 +230,11 @@
                 <button id="btn-share" class="action btn-secondary" title="Copy link with these coordinates" data-i18n="shareLink" data-i18n-title="shareTitle">🔗 Share Link</button>
             </div>
         </section>
+
+        <footer class="sidebar-footer">
+            <span>&copy; 2026 <a href="https://pedrommgoncalves.github.io/" target="_blank" rel="noopener" title="Portfolio" data-i18n-title="portfolioTitle">Pedro Gonçalves</a></span>
+            <a href="https://github.com/PedroMMGoncalves/snap-wkt-generator" target="_blank" rel="noopener" title="View source on GitHub" data-i18n-title="sourceTitle">GitHub</a>
+        </footer>
     </aside>
 
     <main class="map-container">
@@ -247,6 +264,8 @@
                 copyWkt: "Copy WKT",
                 shareLink: "🔗 Share Link",
                 shareTitle: "Copy link with these coordinates",
+                portfolioTitle: "Portfolio",
+                sourceTitle: "View source on GitHub",
                 themeTitle: "Toggle Dark/Light Mode",
                 langTitle: "Change language",
                 noscript: "This application requires JavaScript to be enabled.",
@@ -277,6 +296,8 @@
                 copyWkt: "Copiar WKT",
                 shareLink: "🔗 Partilhar Link",
                 shareTitle: "Copiar link com estas coordenadas",
+                portfolioTitle: "Portfólio",
+                sourceTitle: "Ver código no GitHub",
                 themeTitle: "Alternar Modo Escuro/Claro",
                 langTitle: "Mudar idioma",
                 noscript: "Esta aplicação requer que o JavaScript esteja ativado.",
