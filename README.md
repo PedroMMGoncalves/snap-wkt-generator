@@ -7,6 +7,10 @@ It is a static page: `index.html` for the UI, `wkt.js` for the geometry helpers,
 [![Live demo](https://img.shields.io/badge/demo-GitHub_Pages-2ea44f.svg)](https://pedrommgoncalves.github.io/snap-wkt-generator/)
 [![tests](https://github.com/PedroMMGoncalves/snap-wkt-generator/actions/workflows/tests.yml/badge.svg)](https://github.com/PedroMMGoncalves/snap-wkt-generator/actions/workflows/tests.yml)
 [![Leaflet](https://img.shields.io/badge/Leaflet-1.9.4-199900.svg)](https://leafletjs.com)
+[![Leaflet.draw](https://img.shields.io/badge/Leaflet.draw-1.0.4-199900.svg)](https://github.com/Leaflet/Leaflet.draw)
+[![Formats](https://img.shields.io/badge/formats-WKT_%7C_GeoJSON_%7C_KML-blue.svg)](#import-and-export)
+[![i18n](https://img.shields.io/badge/i18n-EN_%7C_PT-blue.svg)](#what-it-does)
+[![CRS](https://img.shields.io/badge/CRS-EPSG%3A4326-blue.svg)](https://epsg.io/4326)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 
 **Live:** <https://pedrommgoncalves.github.io/snap-wkt-generator/>
@@ -21,6 +25,7 @@ The flow also works backwards: paste a WKT `POLYGON` into the output box and it 
 
 A few things worth knowing:
 
+- Import a GeoJSON or KML polygon (file picker or drag onto the map) and export the current area back to either. See [Import and export](#import-and-export).
 - Input is validated before it's applied: latitude within ±90, longitude within ±180, North above South, East of West.
 - The current box is written into the URL as `?bbox=west,south,east,north`, so a shared link reopens the exact same area. **Share Link** copies it.
 - Last box, theme, language and basemap are remembered in `localStorage`.
@@ -51,6 +56,15 @@ POLYGON ((-9.50000 42.20000, -6.20000 42.20000, -6.20000 36.90000, -9.50000 36.9
 ```
 
 Coordinates are WGS84 (EPSG:4326), longitude/latitude in decimal degrees. Reproject if your SNAP graph works in another CRS. Parsing handles a single-ring `POLYGON` only; multipolygons, holes and other geometry types are not supported.
+
+## Import and export
+
+Bring an existing area in, or take the current one out:
+
+- **Import** a GeoJSON or KML file with **Import file**, or drag it onto the map. The first polygon is loaded; a `MultiPolygon` uses its first ring, and altitude values in KML coordinates are dropped.
+- **Export** the current area as GeoJSON (`aoi.geojson`) or KML (`aoi.kml`) with the matching buttons.
+
+Everything stays in WGS84 lon/lat; nothing is reprojected on the way in or out.
 
 ## Running locally
 
